@@ -39,21 +39,33 @@ func setupStatic(r *gin.Engine) {
 }
 
 func setupRoutes(r *gin.Engine, gormDB *gorm.DB) {
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
-	})
+	// Группа публичных API
+	api := r.Group("/api")
+	{
+		// Аутентификация
+		api.POST("/login", handlers.LoginHandler(gormDB))
 
-	r.POST("/api/login", handlers.LoginHandler(gormDB))
-	r.GET("/api/news", handlers.GetAllNews(gormDB))
-	r.GET("/api/news/:id", handlers.GetNewsByID(gormDB))
-	// защищённые маршруты
-	press := r.Group("/api/press")
+		// Новости (публичные)
+		api.GET("/news", handlers.GetAllNews(gormDB))
+		api.GET("/news/:id", handlers.GetNewsByID(gormDB))
+
+		// Турниры
+		tournament := api.Group("/tournaments")
+		{
+			tournament.POST("/", handlers.CreateTournament(gormDB))
+			tournament.GET("/", handlers.GetTournaments(gormDB))
+		}
+	}
+
+	// Защищённая пресс-группа (только авторизованные пользователи)
+	press := r.Group("/press")
 	press.Use(middleware.AuthMiddleware_forLogin())
 	{
-		press.GET("/profile", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Пресс-панель доступна"}) })
+		press.GET("/profile", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Пресс-панель доступна"})
+		})
 		press.POST("/news", handlers.CreateNewsHandler(gormDB))
 		press.PUT("/news/:id", handlers.UpdateNewsHandler(gormDB))
 		press.DELETE("/news/:id", handlers.DeleteNewsHandler(gormDB))
-
 	}
 }

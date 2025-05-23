@@ -38,6 +38,7 @@ func ConnectDB() *gorm.DB {
 	db.AutoMigrate(
 		&models.News{},
 		&models.User{},
+		&models.Tournament{},
 	)
 	SeedPressUser(db)
 	return db
