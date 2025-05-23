@@ -21,13 +21,13 @@ func GetAllNews(db *gorm.DB) gin.HandlerFunc {
 		c.JSON(200, news)
 	}
 }
+
 func CreateNewsHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		title := c.PostForm("title")
 		content := c.PostForm("content")
 		videoUrl := c.PostForm("videoUrl")
 
-		// Обработка картинки
 		file, err := c.FormFile("image")
 		var imagePath string
 		if err == nil && file != nil {
@@ -55,6 +55,66 @@ func CreateNewsHandler(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func UpdateNewsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var news models.News
+		id := c.Param("id")
+
+		if err := db.First(&news, id).Error; err != nil {
+			c.JSON(404, gin.H{"error": "Новость не найдена"})
+			return
+		}
+
+		var updateData struct {
+			Title    string `json:"title"`
+			Content  string `json:"content"`
+			VideoURL string `json:"videoUrl"`
+		}
+
+		if err := c.ShouldBindJSON(&updateData); err != nil {
+			c.JSON(400, gin.H{"error": "Неверный формат данных"})
+			return
+		}
+
+		news.Title = updateData.Title
+		news.Content = updateData.Content
+		news.VideoURL = updateData.VideoURL
+
+		if err := db.Save(&news).Error; err != nil {
+			c.JSON(500, gin.H{"error": "Ошибка при обновлении"})
+			return
+		}
+
+		c.JSON(200, gin.H{"message": "Новость обновлена"})
+	}
+}
+
+func DeleteNewsHandler(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+
+		var news models.News
+		if err := db.First(&news, id).Error; err != nil {
+			c.JSON(404, gin.H{"error": "Новость не найдена"})
+			return
+		}
+
+		if news.ImageURL != "" {
+			imagePath := "." + news.ImageURL
+			if err := os.Remove(imagePath); err != nil && !os.IsNotExist(err) {
+				log.Printf("Не удалось удалить изображение: %v", err)
+			}
+		}
+
+		if err := db.Delete(&news).Error; err != nil {
+			c.JSON(500, gin.H{"error": "Не удалось удалить новость"})
+			return
+		}
+
+		c.JSON(200, gin.H{"message": "Новость удалена"})
+	}
+}
+
 func saveImage(c *gin.Context, file *multipart.FileHeader) (string, error) {
 	uploadsDir := "./uploads"
 	if err := os.MkdirAll(uploadsDir, os.ModePerm); err != nil {
@@ -70,4 +130,17 @@ func saveImage(c *gin.Context, file *multipart.FileHeader) (string, error) {
 	}
 
 	return "/uploads/" + filename, nil
+}
+func GetNewsByID(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		var news models.News
+
+		if err := db.First(&news, id).Error; err != nil {
+			c.JSON(404, gin.H{"error": "Новость не найдена"})
+			return
+		}
+
+		c.JSON(200, news)
+	}
 }

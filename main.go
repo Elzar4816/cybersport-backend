@@ -45,14 +45,15 @@ func setupRoutes(r *gin.Engine, gormDB *gorm.DB) {
 
 	r.POST("/api/login", handlers.LoginHandler(gormDB))
 	r.GET("/api/news", handlers.GetAllNews(gormDB))
-
+	r.GET("/api/news/:id", handlers.GetNewsByID(gormDB))
 	// защищённые маршруты
 	press := r.Group("/api/press")
 	press.Use(middleware.AuthMiddleware_forLogin())
 	{
-		press.GET("/profile", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "Пресс-панель доступна"})
-		})
+		press.GET("/profile", func(c *gin.Context) { c.JSON(200, gin.H{"message": "Пресс-панель доступна"}) })
 		press.POST("/news", handlers.CreateNewsHandler(gormDB))
+		press.PUT("/news/:id", handlers.UpdateNewsHandler(gormDB))
+		press.DELETE("/news/:id", handlers.DeleteNewsHandler(gormDB))
+
 	}
 }
