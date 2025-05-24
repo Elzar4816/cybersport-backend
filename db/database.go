@@ -38,9 +38,12 @@ func ConnectDB() *gorm.DB {
 	db.AutoMigrate(
 		&models.News{},
 		&models.User{},
+		&models.Game{},
 		&models.Tournament{},
 	)
 	SeedPressUser(db)
+	SeedGames(db)
+
 	return db
 }
 
@@ -54,5 +57,30 @@ func SeedPressUser(db *gorm.DB) {
 			Password: string(passwordHash),
 		})
 		log.Println("Пресс-пользователь создан: press / press")
+	}
+}
+func SeedGames(db *gorm.DB) {
+	games := []struct {
+		Name    string
+		LogoURL string
+	}{
+		{"PUBG Mobile", "/tournaments-logo/pubg-mobile.png"},
+		{"Call of Duty: Mobile", "/tournaments-logo/call-of-duty-mobile.png"},
+		{"Roblox", "/tournaments-logo/roblox.png"},
+		{"World of Tanks", "/tournaments-logo/world-of-tanks.png"},
+		{"Counter-Strike 1.6", "/tournaments-logo/cs-1-6.png"},
+		{"Counter-Strike 2", "/tournaments-logo/cs-2.png"},
+		{"Dota 2", "/tournaments-logo/dota-2.png"},
+		{"Clash Royale", "/tournaments-logo/clash-royale.png"},
+		{"Honor of Kings", "/tournaments-logo/honor-of-kings.png"},
+	}
+
+	for _, g := range games {
+		var count int64
+		db.Model(&models.Game{}).Where("name = ?", g.Name).Count(&count)
+		if count == 0 {
+			db.Create(&models.Game{Name: g.Name, LogoURL: g.LogoURL})
+			log.Printf("Игра добавлена: %s\n", g.Name)
+		}
 	}
 }

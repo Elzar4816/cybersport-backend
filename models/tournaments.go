@@ -13,19 +13,30 @@ const (
 type Tournament struct {
 	ID          uint64           `json:"id" gorm:"primaryKey"`
 	Title       string           `json:"title"`
-	Description string           `json:"description"` // краткое описание
-	Game        string           `json:"game"`
-	Region      string           `json:"region"` // например, "EMEA", "Americas", "Student"
+	Description string           `json:"description"`
+	GameID      uint             `json:"game_id"` // внешний ключ
+	Game        Game             `json:"game" gorm:"foreignKey:GameID"`
+	Region      string           `json:"region"`
 	StartDate   time.Time        `json:"start_date"`
 	EndDate     time.Time        `json:"end_date"`
-	Status      TournamentStatus `json:"status"`     // upcoming, ongoing, completed
-	PrizePool   *int             `json:"prize_pool"` // может быть nil, если не указан
-	Stage       string           `json:"stage"`      // например, "Stage 1 2025"
-	IsOpen      bool             `json:"is_open"`    // можно ли зарегистрироваться
+	Status      TournamentStatus `json:"status"`
+	PrizePool   *int             `json:"prize_pool"`
+	Stage       string           `json:"stage"`
+	IsOpen      bool             `json:"is_open"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 func (Tournament) TableName() string {
 	return "tournaments"
+}
+
+type Game struct {
+	ID      uint   `json:"id" gorm:"primaryKey"`
+	Name    string `json:"name" gorm:"uniqueIndex;not null"`
+	LogoURL string `json:"logo_url" gorm:"not null"`
+}
+
+func (Game) TableName() string {
+	return "games"
 }

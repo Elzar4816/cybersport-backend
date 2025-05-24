@@ -49,6 +49,8 @@ func setupRoutes(r *gin.Engine, gormDB *gorm.DB) {
 		api.GET("/news", handlers.GetAllNews(gormDB))
 		api.GET("/news/:id", handlers.GetNewsByID(gormDB))
 
+		api.GET("/games", handlers.GetGames(gormDB))
+
 		// Турниры
 		tournament := api.Group("/tournaments")
 		{

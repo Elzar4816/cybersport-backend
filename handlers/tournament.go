@@ -53,11 +53,21 @@ func CreateTournament(db *gorm.DB) gin.HandlerFunc {
 func GetTournaments(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var tournaments []models.Tournament
-		if err := db.Order("start_date desc").Find(&tournaments).Error; err != nil {
+		if err := db.Preload("Game").Order("start_date desc").Find(&tournaments).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch tournaments"})
 			return
 		}
 
 		c.JSON(http.StatusOK, tournaments)
+	}
+}
+func GetGames(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var games []models.Game
+		if err := db.Find(&games).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch games"})
+			return
+		}
+		c.JSON(http.StatusOK, games)
 	}
 }
