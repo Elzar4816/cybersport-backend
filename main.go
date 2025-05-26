@@ -42,24 +42,18 @@ func setupRoutes(r *gin.Engine, gormDB *gorm.DB) {
 	// Группа публичных API
 	api := r.Group("/api")
 	{
-		// Аутентификация
 		api.POST("/login", handlers.LoginHandler(gormDB))
-
-		// Новости (публичные)
 		api.GET("/news", handlers.GetAllNews(gormDB))
 		api.GET("/news/:id", handlers.GetNewsByID(gormDB))
-
 		api.GET("/games", handlers.GetGames(gormDB))
 
-		// Турниры
 		tournament := api.Group("/tournaments")
 		{
-			tournament.POST("/", handlers.CreateTournament(gormDB))
 			tournament.GET("/", handlers.GetTournaments(gormDB))
 		}
 	}
 
-	// Защищённая пресс-группа (только авторизованные пользователи)
+	// Защищённая пресс-группа
 	press := r.Group("/press")
 	press.Use(middleware.AuthMiddleware_forLogin())
 	{
@@ -69,5 +63,13 @@ func setupRoutes(r *gin.Engine, gormDB *gorm.DB) {
 		press.POST("/news", handlers.CreateNewsHandler(gormDB))
 		press.PUT("/news/:id", handlers.UpdateNewsHandler(gormDB))
 		press.DELETE("/news/:id", handlers.DeleteNewsHandler(gormDB))
+
+		// ✅ Переносим турниры сюда
+		tournament := press.Group("/tournaments")
+		{
+			tournament.POST("/", handlers.CreateTournament(gormDB))
+			tournament.PUT("/:id", handlers.UpdateTournament(gormDB))
+			tournament.DELETE("/:id", handlers.DeleteTournament(gormDB))
+		}
 	}
 }
