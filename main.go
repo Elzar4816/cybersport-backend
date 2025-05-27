@@ -4,9 +4,11 @@ import (
 	"cybersport-backend/db"
 	"cybersport-backend/handlers"
 	"cybersport-backend/middleware"
+	"cybersport-backend/storage"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
+	"os"
 )
 
 func main() {
@@ -19,7 +21,7 @@ func main() {
 	// Инициализация Gin
 	r := gin.Default()
 	r.Use(gin.Recovery())
-
+	storage.InitMinio(os.Getenv("MINIO_ENDPOINT"), os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), false)
 	// Подключаем статику и отдачу frontend'а
 	setupStatic(r)
 
@@ -54,7 +56,7 @@ func setupRoutes(r *gin.Engine, gormDB *gorm.DB) {
 	}
 
 	// Защищённая пресс-группа
-	press := r.Group("/press")
+	press := r.Group("/api/press")
 	press.Use(middleware.AuthMiddleware_forLogin())
 	{
 		press.GET("/profile", func(c *gin.Context) {

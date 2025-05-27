@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cybersport-backend/models"
+	"cybersport-backend/storage"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
@@ -18,6 +19,17 @@ func GetAllNews(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(500, gin.H{"error": "Failed to fetch news"})
 			return
 		}
+
+		// добавляем presigned URL
+		for i := range news {
+			if news[i].ImageURL != "" {
+				url, err := storage.GetPresignedURL(news[i].ImageURL)
+				if err == nil {
+					news[i].ImageURL = url
+				}
+			}
+		}
+
 		c.JSON(200, news)
 	}
 }
@@ -31,7 +43,8 @@ func CreateNewsHandler(db *gorm.DB) gin.HandlerFunc {
 		file, err := c.FormFile("image")
 		var imagePath string
 		if err == nil && file != nil {
-			imagePath, err = saveImage(c, file)
+			imagePath, err = storage.SaveImageToMinio(file)
+
 			if err != nil {
 				c.JSON(500, gin.H{"error": "Не удалось сохранить изображение"})
 				return
@@ -65,23 +78,42 @@ func UpdateNewsHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		var updateData struct {
-			Title    string `json:"title"`
-			Content  string `json:"content"`
-			VideoURL string `json:"videoUrl"`
+		title := c.PostForm("title")
+		content := c.PostForm("content")
+		videoUrl := c.PostForm("videoUrl")
+		removeImage := c.PostForm("removeImage") // из FormData приходит строка
+
+		if title != "" {
+			news.Title = title
+		}
+		if content != "" {
+			news.Content = content
+		}
+		if videoUrl != "" {
+			news.VideoURL = videoUrl
 		}
 
-		if err := c.ShouldBindJSON(&updateData); err != nil {
-			c.JSON(400, gin.H{"error": "Неверный формат данных"})
-			return
-		}
+		file, err := c.FormFile("image")
+		if err == nil && file != nil {
+			// Загружается новое изображение → удалить старое и сохранить новое
+			if news.ImageURL != "" {
+				_ = storage.DeleteImageFromMinio(news.ImageURL)
+			}
 
-		news.Title = updateData.Title
-		news.Content = updateData.Content
-		news.VideoURL = updateData.VideoURL
+			newImageName, err := storage.SaveImageToMinio(file)
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Ошибка при загрузке нового изображения"})
+				return
+			}
+			news.ImageURL = newImageName
+		} else if removeImage == "true" && news.ImageURL != "" {
+			// Флаг удаления изображения активен, нового файла нет → удалить
+			_ = storage.DeleteImageFromMinio(news.ImageURL)
+			news.ImageURL = ""
+		}
 
 		if err := db.Save(&news).Error; err != nil {
-			c.JSON(500, gin.H{"error": "Ошибка при обновлении"})
+			c.JSON(500, gin.H{"error": "Ошибка при обновлении новости"})
 			return
 		}
 
@@ -100,9 +132,9 @@ func DeleteNewsHandler(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		if news.ImageURL != "" {
-			imagePath := "." + news.ImageURL
-			if err := os.Remove(imagePath); err != nil && !os.IsNotExist(err) {
-				log.Printf("Не удалось удалить изображение: %v", err)
+			err := storage.DeleteImageFromMinio(news.ImageURL)
+			if err != nil {
+				log.Printf("⚠️ Не удалось удалить изображение из MinIO: %v", err)
 			}
 		}
 
@@ -139,6 +171,13 @@ func GetNewsByID(db *gorm.DB) gin.HandlerFunc {
 		if err := db.First(&news, id).Error; err != nil {
 			c.JSON(404, gin.H{"error": "Новость не найдена"})
 			return
+		}
+
+		if news.ImageURL != "" {
+			url, err := storage.GetPresignedURL(news.ImageURL)
+			if err == nil {
+				news.ImageURL = url
+			}
 		}
 
 		c.JSON(200, news)

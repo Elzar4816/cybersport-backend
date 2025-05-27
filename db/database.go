@@ -15,13 +15,15 @@ var db *gorm.DB
 
 func ConnectDB() *gorm.DB {
 	// Загружаем переменные окружения
-	if err := godotenv.Load("configuration.env"); err != nil {
+	if err := godotenv.Load("backend.env"); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
 	// Формируем строку подключения
 	dsn := fmt.Sprintf(
-		"user=%s password=%s dbname=%s sslmode=disable client_encoding=UTF8",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable client_encoding=UTF8",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
