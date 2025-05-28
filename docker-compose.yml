@@ -22,6 +22,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:80"
+    depends_on:
+      - backend
+    restart: always
 
   minio:
     image: minio/minio
@@ -34,6 +37,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     command: server /data --console-address ":9001"
+    restart: always
 
   postgres:
     image: postgres:15
