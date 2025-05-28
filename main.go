@@ -20,6 +20,7 @@ func main() {
 
 	// Инициализация Gin
 	r := gin.Default()
+	r.MaxMultipartMemory = 3072 << 20 // 3 GB
 	r.Use(gin.Recovery())
 	storage.InitMinio(os.Getenv("MINIO_ENDPOINT"), os.Getenv("MINIO_ACCESS_KEY"), os.Getenv("MINIO_SECRET_KEY"), false)
 	// Подключаем статику и отдачу frontend'а
